@@ -86,19 +86,25 @@ class DBBookingWorker(object):
         try:
             self.dbconn_fly_booking.tpc_prepare()
             self.dbconn_hotel_booking.commit()
-        except psycopg2.DatabaseError:
+        except (psycopg2.DatabaseError, psycopg2.ProgrammingError) as er:
             logger.warn("Rollback. Fail occurred during transaction.")
+            logger.warn("Error was '{}'".format(er.message))
             self.dbconn_fly_booking.tpc_rollback()
             self.dbconn_hotel_booking.rollback()
         else:
-            logger.warn("Commit. Done successful transaction.")
+            logger.info("Commit. Done successful transaction.")
             self.dbconn_fly_booking.tpc_commit()
 
 
 logger.info("Start program ...")
 
+
 worker = DBBookingWorker(settings=settings)
-# worker.show_all_booking_flies()
-# worker.show_all_booking_hotels()
-worker.make_two_phase_transaction()
+
+
+def show_all_data():
+    worker.show_all_booking_flies()
+    worker.show_all_booking_hotels()
+
+worker.make_two_phase_transaction(show_all_data)
 logger.info("End program.")
